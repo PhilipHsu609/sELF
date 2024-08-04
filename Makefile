@@ -1,17 +1,15 @@
-ASM=c fib triangle
+test=hello-c hello-asm
 
-all: main asm
+all: main test
 
-asm: $(ASM)
+test: $(test)
 
-c: asm/c.asm
-	nasm -f elf64 asm/c.asm -o c.o && gcc -no-pie c.o -o c
+hello-c: test/hello.c
+	gcc -o hello-c test/hello.c
 
-fib: asm/fib.asm
-	nasm -f elf64 asm/fib.asm -o fib.o && gcc -no-pie fib.o -o fib
-
-triangle: asm/triangle.asm
-	nasm -f elf64 asm/triangle.asm -o triangle.o && ld triangle.o -o triangle	
+hello-asm: test/hello.asm
+	nasm -f elf64 test/hello.asm -o hello-asm.o
+	ld --dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie hello-asm.o -o hello-asm
 
 main: main.o
 	gcc main.o -o main
@@ -20,4 +18,4 @@ main.o: main.c
 	gcc -c -g main.c
 
 clean:
-	rm -f main c fib triangle *.o
+	rm -f main hello-c hello-asm *.o

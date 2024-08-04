@@ -1,6 +1,8 @@
-; calculate fibonacci number recursively
+; calculate fibonacci number recursively in assembly with libc
 ; compile with
-;       `nasm -f elf64 fib.asm && gcc -no-pie fib.o -o fib`
+;       `nasm -f elf64 fib.asm && gcc fib.o -o fib`
+
+        default rel
 
         global main
         extern printf
@@ -19,7 +21,7 @@ main:
         mov edi, eax
         call fib
 
-        mov rdi, fmt
+        lea rdi, [fmt]
         mov rsi, rax
         mov eax, 0
         call printf
@@ -27,7 +29,7 @@ main:
         ret
 
 .usage:
-        mov rdi, usage
+        lea rdi, [usage]
         mov eax, 0
         call printf
         xor eax, eax

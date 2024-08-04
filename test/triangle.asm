@@ -8,7 +8,6 @@
 ; ****
 
     global _start
-    extern puts
 
     section .text
 _start:

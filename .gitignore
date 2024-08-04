@@ -1,6 +1,4 @@
 *.o
-
 main
-c
-fib
-triangle
+hello-asm
+hello-c
