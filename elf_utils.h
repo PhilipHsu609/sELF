@@ -130,23 +130,26 @@ extern inline void elf_read_strtab(Elf_File *elf) {
 
   // .strtab
   const int strtab_idx = elf_get_section_idx(elf, ".strtab");
-  elf->strtab = (char *)malloc(elf->shdr[strtab_idx].sh_size);
-  elf_read_section(elf, strtab_idx, elf->strtab);
+  if (strtab_idx != -1) {
+    elf->strtab = (char *)malloc(elf->shdr[strtab_idx].sh_size);
+    elf_read_section(elf, strtab_idx, elf->strtab);
+  }
 
   // .dynstr
   const int dynstr_idx = elf_get_section_idx(elf, ".dynstr");
-  elf->dynstr = (char *)malloc(elf->shdr[dynstr_idx].sh_size);
-  elf_read_section(elf, dynstr_idx, elf->dynstr);
+  if (dynstr_idx != -1) {
+    elf->dynstr = (char *)malloc(elf->shdr[dynstr_idx].sh_size);
+    elf_read_section(elf, dynstr_idx, elf->dynstr);
+  }
 }
 
 extern inline void elf_read_symtab(Elf_File *elf) {
   const int symtab_idx = elf_get_section_idx(elf, ".symtab");
-
-  assert(elf->shdr[symtab_idx].sh_entsize == sizeof(Elf64_Sym));
-
-  elf->symtab_entries = elf->shdr[symtab_idx].sh_size / sizeof(Elf64_Sym);
-  elf->symtab = (Elf64_Sym *)malloc(elf->symtab_entries * sizeof(Elf64_Sym));
-  elf_read_section(elf, symtab_idx, elf->symtab);
+  if (symtab_idx != -1) {
+    elf->symtab_entries = elf->shdr[symtab_idx].sh_size / sizeof(Elf64_Sym);
+    elf->symtab = (Elf64_Sym *)malloc(elf->symtab_entries * sizeof(Elf64_Sym));
+    elf_read_section(elf, symtab_idx, elf->symtab);
+  }
 }
 
 extern inline const char *get_type(const Elf64_Ehdr *ehdr) {
