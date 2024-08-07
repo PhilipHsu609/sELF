@@ -167,9 +167,8 @@ extern inline void elf_read_symtab(Elf_File *elf) {
 
   const int dynsym_idx = elf_get_section_idx(elf, ".dynsym");
   if (dynsym_idx != -1) {
-    const int dynsym_entries =
-        elf->shdr[dynsym_idx].sh_size / sizeof(Elf64_Sym);
-    elf->dynsym = (Elf64_Sym *)malloc(dynsym_entries * sizeof(Elf64_Sym));
+    elf->dynsym_entries = elf->shdr[dynsym_idx].sh_size / sizeof(Elf64_Sym);
+    elf->dynsym = (Elf64_Sym *)malloc(elf->dynsym_entries * sizeof(Elf64_Sym));
     elf_read_section(elf, dynsym_idx, elf->dynsym);
   }
 }
