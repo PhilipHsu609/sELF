@@ -23,6 +23,8 @@ typedef struct {
   // sections - symbol tables
   Elf64_Sym *symtab;
   int symtab_entries;
+  Elf64_Sym *dynsym;
+  int dynsym_entries;
   // sections - dynamic section
   Elf64_Dyn *dynamic;
   int dynamic_entries;
@@ -48,6 +50,8 @@ extern inline Elf_File *elf_init(const char *filename) {
   // sections - symbol tables
   elf->symtab = NULL;
   elf->symtab_entries = 0;
+  elf->dynsym = NULL;
+  elf->dynsym_entries = 0;
   // sections - dynamic section
   elf->dynamic = NULL;
   elf->dynamic_entries = 0;
@@ -93,6 +97,7 @@ extern inline void elf_free(Elf_File *elf) {
   free(elf->dynstr);
   // sections - symbol tables
   free(elf->symtab);
+  free(elf->dynsym);
   // sections - dynamic section
   free(elf->dynamic);
   free(elf);
@@ -158,6 +163,14 @@ extern inline void elf_read_symtab(Elf_File *elf) {
     elf->symtab_entries = elf->shdr[symtab_idx].sh_size / sizeof(Elf64_Sym);
     elf->symtab = (Elf64_Sym *)malloc(elf->symtab_entries * sizeof(Elf64_Sym));
     elf_read_section(elf, symtab_idx, elf->symtab);
+  }
+
+  const int dynsym_idx = elf_get_section_idx(elf, ".dynsym");
+  if (dynsym_idx != -1) {
+    const int dynsym_entries =
+        elf->shdr[dynsym_idx].sh_size / sizeof(Elf64_Sym);
+    elf->dynsym = (Elf64_Sym *)malloc(dynsym_entries * sizeof(Elf64_Sym));
+    elf_read_section(elf, dynsym_idx, elf->dynsym);
   }
 }
 
