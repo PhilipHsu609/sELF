@@ -2,7 +2,7 @@
 
 Playing with ELF.
 
-- `asm` random assembly code
+- `test` code for testing
 
 ## Usage
 

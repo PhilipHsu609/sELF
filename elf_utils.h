@@ -12,11 +12,15 @@
 typedef struct {
   int fd;
   uint8_t *file;
+  // headers
   Elf64_Ehdr *ehdr;
   Elf64_Phdr *phdr;
   Elf64_Shdr *shdr;
+  // sections - string tables
   char *shstrtab;
   char *strtab;
+  char *dynstr;
+  // sections - symbol tables
   Elf64_Sym *symtab;
   int symtab_entries;
 } Elf_File;
@@ -29,16 +33,42 @@ extern inline Elf_File *elf_init(const char *filename) {
   Elf_File *elf = (Elf_File *)malloc(sizeof(Elf_File));
   elf->fd = fd;
   elf->file = (uint8_t *)malloc(file_size);
+  // headers
   elf->ehdr = (Elf64_Ehdr *)malloc(sizeof(Elf64_Ehdr));
   elf->phdr = NULL;
   elf->shdr = NULL;
+  // sections - string tables
   elf->shstrtab = NULL;
   elf->strtab = NULL;
+  elf->dynstr = NULL;
+  // sections - symbol tables
   elf->symtab = NULL;
   elf->symtab_entries = 0;
 
   read(fd, elf->file, file_size);
+
+  // ELF header
   memcpy(elf->ehdr, elf->file, sizeof(Elf64_Ehdr));
+
+  const Elf64_Ehdr *ehdr = elf->ehdr;
+
+  // Program headers
+  if (ehdr->e_phnum > 0) {
+    elf->phdr = (Elf64_Phdr *)malloc(ehdr->e_phnum * sizeof(Elf64_Phdr));
+    for (int i = 0; i < ehdr->e_phnum; i++) {
+      memcpy(&elf->phdr[i], &elf->file[ehdr->e_phoff + i * sizeof(Elf64_Phdr)],
+             sizeof(Elf64_Phdr));
+    }
+  }
+
+  // Section headers
+  if (ehdr->e_shnum > 0) {
+    elf->shdr = (Elf64_Shdr *)malloc(ehdr->e_shnum * sizeof(Elf64_Shdr));
+    for (int i = 0; i < ehdr->e_shnum; i++) {
+      memcpy(&elf->shdr[i], &elf->file[ehdr->e_shoff + i * sizeof(Elf64_Shdr)],
+             sizeof(Elf64_Shdr));
+    }
+  }
 
   return elf;
 }
@@ -46,11 +76,15 @@ extern inline Elf_File *elf_init(const char *filename) {
 extern inline void elf_free(Elf_File *elf) {
   close(elf->fd);
   free(elf->file);
+  // headers
   free(elf->ehdr);
   free(elf->phdr);
   free(elf->shdr);
+  // sections - string tables
   free(elf->shstrtab);
   free(elf->strtab);
+  free(elf->dynstr);
+  // sections - symbol tables
   free(elf->symtab);
   free(elf);
 }
@@ -85,43 +119,24 @@ extern inline int elf_get_sym_idx(const Elf_File *elf, const char *sym_name) {
   return -1;
 }
 
-extern inline void elf_read_phdr(Elf_File *elf) {
-  const Elf64_Ehdr *ehdr = elf->ehdr;
-
-  if (ehdr->e_phnum > 0) {
-    elf->phdr = (Elf64_Phdr *)malloc(ehdr->e_phnum * sizeof(Elf64_Phdr));
-    for (int i = 0; i < ehdr->e_phnum; i++) {
-      memcpy(&elf->phdr[i], &elf->file[ehdr->e_phoff + i * sizeof(Elf64_Phdr)],
-             sizeof(Elf64_Phdr));
-    }
-  }
-}
-
-extern inline void elf_read_shdr(Elf_File *elf) {
-  const Elf64_Ehdr *ehdr = elf->ehdr;
-
-  if (ehdr->e_shnum > 0) {
-    elf->shdr = (Elf64_Shdr *)malloc(ehdr->e_shnum * sizeof(Elf64_Shdr));
-    for (int i = 0; i < ehdr->e_shnum; i++) {
-      memcpy(&elf->shdr[i], &elf->file[ehdr->e_shoff + i * sizeof(Elf64_Shdr)],
-             sizeof(Elf64_Shdr));
-    }
-  }
-}
-
-extern inline void elf_read_shstrtab(Elf_File *elf) {
+extern inline void elf_read_strtab(Elf_File *elf) {
   const Elf64_Shdr *shdr = elf->shdr;
-  const int shstrtab_idx = elf->ehdr->e_shstrndx;
 
+  // .shstrtab
+  const int shstrtab_idx = elf->ehdr->e_shstrndx;
   elf->shstrtab = (char *)malloc(shdr[shstrtab_idx].sh_size);
   memcpy(elf->shstrtab, &elf->file[shdr[shstrtab_idx].sh_offset],
          shdr[shstrtab_idx].sh_size);
-}
 
-extern inline void elf_read_strtab(Elf_File *elf) {
+  // .strtab
   const int strtab_idx = elf_get_section_idx(elf, ".strtab");
   elf->strtab = (char *)malloc(elf->shdr[strtab_idx].sh_size);
   elf_read_section(elf, strtab_idx, elf->strtab);
+
+  // .dynstr
+  const int dynstr_idx = elf_get_section_idx(elf, ".dynstr");
+  elf->dynstr = (char *)malloc(elf->shdr[dynstr_idx].sh_size);
+  elf_read_section(elf, dynstr_idx, elf->dynstr);
 }
 
 extern inline void elf_read_symtab(Elf_File *elf) {
