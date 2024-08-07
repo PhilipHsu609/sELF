@@ -14,8 +14,9 @@ int main(int argc, char **argv) {
 
   Elf_File *elf = elf_init(argv[1]);
 
-  elf_read_strtab(elf); // Read string table
-  elf_read_symtab(elf); // Read symbol table
+  elf_read_strtab(elf);  // Read string table
+  elf_read_symtab(elf);  // Read symbol table
+  elf_read_dynamic(elf); // Read dynamic section
 
   elf_free(elf);
   return 0;

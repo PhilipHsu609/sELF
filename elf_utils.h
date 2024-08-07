@@ -23,6 +23,10 @@ typedef struct {
   // sections - symbol tables
   Elf64_Sym *symtab;
   int symtab_entries;
+  // sections - dynamic section
+  Elf64_Dyn *dynamic;
+  int dynamic_entries;
+  // sections - relocation section
 } Elf_File;
 
 extern inline Elf_File *elf_init(const char *filename) {
@@ -44,6 +48,9 @@ extern inline Elf_File *elf_init(const char *filename) {
   // sections - symbol tables
   elf->symtab = NULL;
   elf->symtab_entries = 0;
+  // sections - dynamic section
+  elf->dynamic = NULL;
+  elf->dynamic_entries = 0;
 
   read(fd, elf->file, file_size);
 
@@ -86,12 +93,14 @@ extern inline void elf_free(Elf_File *elf) {
   free(elf->dynstr);
   // sections - symbol tables
   free(elf->symtab);
+  // sections - dynamic section
+  free(elf->dynamic);
   free(elf);
 }
 
 extern inline int elf_get_section_idx(const Elf_File *elf,
                                       const char *section_name) {
-  assert(elf->shstrtab != NULL && "elf_read_shstrtab must be called first");
+  assert(elf->shstrtab != NULL && "elf_read_strtab must be called first");
   for (int i = 0; i < elf->ehdr->e_shnum; i++) {
     if (strcmp(&elf->shstrtab[elf->shdr[i].sh_name], section_name) == 0) {
       return i;
@@ -152,20 +161,13 @@ extern inline void elf_read_symtab(Elf_File *elf) {
   }
 }
 
-extern inline const char *get_type(const Elf64_Ehdr *ehdr) {
-  switch (ehdr->e_type) {
-  case ET_NONE:
-    return "NONE (No file type)";
-  case ET_REL:
-    return "REL (Relocatable file)";
-  case ET_EXEC:
-    return "EXEC (Executable file)";
-  case ET_DYN:
-    return "DYN (Shared object file)";
-  case ET_CORE:
-    return "CORE (Core file)";
-  default:
-    return "UNKNOWN";
+extern inline void elf_read_dynamic(Elf_File *elf) {
+  const int dynamic_idx = elf_get_section_idx(elf, ".dynamic");
+  if (dynamic_idx != -1) {
+    elf->dynamic_entries = elf->shdr[dynamic_idx].sh_size / sizeof(Elf64_Dyn);
+    elf->dynamic =
+        (Elf64_Dyn *)malloc(elf->dynamic_entries * sizeof(Elf64_Dyn));
+    elf_read_section(elf, dynamic_idx, elf->dynamic);
   }
 }
 
