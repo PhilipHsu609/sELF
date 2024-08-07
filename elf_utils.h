@@ -5,9 +5,12 @@
 #include <elf.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define HEADER_LIMIT 3
 
 typedef struct {
   int fd;
@@ -180,6 +183,82 @@ extern inline void elf_read_dynamic(Elf_File *elf) {
     elf->dynamic =
         (Elf64_Dyn *)malloc(elf->dynamic_entries * sizeof(Elf64_Dyn));
     elf_read_section(elf, dynamic_idx, elf->dynamic);
+  }
+}
+
+extern inline void elf_print_headers(const Elf_File *elf) {
+  printf("Printing *PART* of ELF headers...\n");
+
+  const Elf64_Ehdr *ehdr = elf->ehdr;
+  printf("ELF header:\n");
+  printf("  e_type: %d\n", ehdr->e_type);
+  printf("  e_machine: %d\n", ehdr->e_machine);
+  printf("  e_entry: %lx\n", ehdr->e_entry);
+
+  const Elf64_Phdr *phdr = elf->phdr;
+  printf("Program headers (first %d headers):\n", HEADER_LIMIT);
+  if (phdr != NULL) {
+    int limit = ehdr->e_phnum > HEADER_LIMIT ? HEADER_LIMIT : ehdr->e_phnum;
+    for (int i = 0; i < limit; i++) {
+      printf("  header %d\n", i);
+      printf("    p_offset: %lx\n", phdr[i].p_offset);
+      printf("    p_type: %d\n", phdr[i].p_type);
+      printf("    p_vaddr: %lx\n", phdr[i].p_vaddr);
+      printf("    p_filesz: %lx\n", phdr[i].p_filesz);
+      printf("    p_memsz: %lx\n", phdr[i].p_memsz);
+    }
+  } else {
+    printf("  No program headers\n");
+  }
+
+  const Elf64_Shdr *shdr = elf->shdr;
+  printf("Section headers (first %d headers):\n", HEADER_LIMIT);
+  if (shdr != NULL) {
+    int limit = ehdr->e_shnum > HEADER_LIMIT ? HEADER_LIMIT : ehdr->e_shnum;
+    for (int i = 0; i < limit; i++) {
+      printf("  %s\n", &elf->shstrtab[shdr[i].sh_name]);
+      printf("    sh_name: %d\n", shdr[i].sh_name);
+      printf("    sh_type: %d\n", shdr[i].sh_type);
+      printf("    sh_offset: %lx\n", shdr[i].sh_offset);
+      printf("    sh_size: %lx\n", shdr[i].sh_size);
+    }
+  } else {
+    printf("  No section headers\n");
+  }
+}
+
+extern inline void elf_print_sections(const Elf_File *elf) {
+  printf("Printing section names...\n");
+
+  printf(".shstrtab:\n");
+  if (elf->shstrtab != NULL) {
+    for (int i = 0; i < elf->ehdr->e_shnum; i++) {
+      printf("  %d: %s\n", i, &elf->shstrtab[elf->shdr[i].sh_name]);
+    }
+  } else {
+    printf("  No .shstrtab\n");
+  }
+}
+
+extern inline void elf_print_symbols(const Elf_File *elf) {
+  printf("Printing symbols...\n");
+
+  printf(".symtab:\n");
+  if (elf->symtab != NULL) {
+    for (int i = 0; i < elf->symtab_entries; i++) {
+      printf("  %d: %s\n", i, &elf->strtab[elf->symtab[i].st_name]);
+    }
+  } else {
+    printf("  No .symtab\n");
+  }
+
+  printf(".dynsym:\n");
+  if (elf->dynsym != NULL) {
+    for (int i = 0; i < elf->dynsym_entries; i++) {
+      printf("  %d: %s\n", i, &elf->dynstr[elf->dynsym[i].st_name]);
+    }
+  } else {
+    printf("  No .dynsym\n");
   }
 }
 
