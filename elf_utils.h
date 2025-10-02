@@ -32,6 +32,10 @@ typedef struct {
   Elf64_Dyn *dynamic;
   int dynamic_entries;
   // sections - relocation section
+  Elf64_Rela *rela_dyn;
+  int rela_dyn_entries;
+  Elf64_Rela *rela_plt;
+  int rela_plt_entries;
 } Elf_File;
 
 extern inline Elf_File *elf_init(const char *filename) {
@@ -58,6 +62,11 @@ extern inline Elf_File *elf_init(const char *filename) {
   // sections - dynamic section
   elf->dynamic = NULL;
   elf->dynamic_entries = 0;
+  // sections - relocation section
+  elf->rela_dyn = NULL;
+  elf->rela_dyn_entries = 0;
+  elf->rela_plt = NULL;
+  elf->rela_plt_entries = 0;
 
   read(fd, elf->file, file_size);
 
@@ -103,6 +112,9 @@ extern inline void elf_free(Elf_File *elf) {
   free(elf->dynsym);
   // sections - dynamic section
   free(elf->dynamic);
+  // sections - relocation section
+  free(elf->rela_dyn);
+  free(elf->rela_plt);
   free(elf);
 }
 
@@ -186,6 +198,22 @@ extern inline void elf_read_dynamic(Elf_File *elf) {
   }
 }
 
+extern inline void elf_read_rela(Elf_File *elf) {
+  const int rela_dyn_idx = elf_get_section_idx(elf, ".rela.dyn");
+  if (rela_dyn_idx != -1) {
+    elf->rela_dyn_entries = elf->shdr[rela_dyn_idx].sh_size / sizeof(Elf64_Rela);
+    elf->rela_dyn = (Elf64_Rela *)malloc(elf->rela_dyn_entries * sizeof(Elf64_Rela));
+    elf_read_section(elf, rela_dyn_idx, elf->rela_dyn);
+  }
+
+  const int rela_plt_idx = elf_get_section_idx(elf, ".rela.plt");
+  if (rela_plt_idx != -1) {
+    elf->rela_plt_entries = elf->shdr[rela_plt_idx].sh_size / sizeof(Elf64_Rela);
+    elf->rela_plt = (Elf64_Rela *)malloc(elf->rela_plt_entries * sizeof(Elf64_Rela));
+    elf_read_section(elf, rela_plt_idx, elf->rela_plt);
+  }
+}
+
 extern inline void elf_print_headers(const Elf_File *elf) {
   printf("Printing *PART* of ELF headers...\n");
 
@@ -259,6 +287,32 @@ extern inline void elf_print_symbols(const Elf_File *elf) {
     }
   } else {
     printf("  No .dynsym\n");
+  }
+}
+
+extern inline void elf_print_relocations(const Elf_File *elf) {
+  printf("Printing relocations...\n");
+
+  printf(".rela.dyn:\n");
+  if (elf->rela_dyn != NULL) {
+    for (int i = 0; i < elf->rela_dyn_entries; i++) {
+      printf("  %d: offset=%lx, info=%lx, addend=%ld\n", i,
+             elf->rela_dyn[i].r_offset, elf->rela_dyn[i].r_info,
+             elf->rela_dyn[i].r_addend);
+    }
+  } else {
+    printf("  No .rela.dyn\n");
+  }
+
+  printf(".rela.plt:\n");
+  if (elf->rela_plt != NULL) {
+    for (int i = 0; i < elf->rela_plt_entries; i++) {
+      printf("  %d: offset=%lx, info=%lx, addend=%ld\n", i,
+             elf->rela_plt[i].r_offset, elf->rela_plt[i].r_info,
+             elf->rela_plt[i].r_addend);
+    }
+  } else {
+    printf("  No .rela.plt\n");
   }
 }
 

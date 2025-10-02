@@ -18,10 +18,12 @@ int main(int argc, char **argv) {
   elf_read_strtab(elf);  // Read string tables
   elf_read_symtab(elf);  // Read symbol tables
   elf_read_dynamic(elf); // Read .dynamic section
+  elf_read_rela(elf);    // Read relocation sections
 
-  elf_print_headers(elf);  // Print ELF, program and section headers
-  elf_print_sections(elf); // Print section names
-  elf_print_symbols(elf);  // Print symbols
+  elf_print_headers(elf);      // Print ELF, program and section headers
+  elf_print_sections(elf);     // Print section names
+  elf_print_symbols(elf);      // Print symbols
+  elf_print_relocations(elf);  // Print relocations
 
   elf_free(elf);
   return 0;
